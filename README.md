@@ -1,36 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 画像解析アプリケーション
 
-## Getting Started
+AIを活用した画像解析Webアプリケーションです。画像をアップロードすると、n8nワークフローを通じてAIが画像の内容を解析し、その結果をテキストで表示します。
 
-First, run the development server:
+## 🌟 主な機能
 
+- **ドラッグ&ドロップ対応**: 画像ファイルを簡単にアップロード
+- **ファイル検証**: 
+  - 対応形式: PNG、JPEG、GIF
+  - 最大サイズ: 5MB
+- **画像プレビュー**: アップロードした画像をその場で確認
+- **画像拡大表示**: プレビュー画像をクリックして拡大表示
+- **AI解析**: n8n経由でAIが画像内容を分析
+- **レスポンシブデザイン**: モバイル・タブレット・PCに対応
+
+## 🛠 技術スタック
+
+### フロントエンド
+- **Next.js 15**: Reactベースのフレームワーク
+- **TypeScript**: 型安全な開発
+- **Tailwind CSS**: ユーティリティファーストのCSSフレームワーク
+- **react-dropzone**: ドラッグ&ドロップファイルアップロード
+
+### バックエンド
+- **n8n**: ワークフロー自動化ツール
+- **Webhook**: n8nへの画像送信エンドポイント
+- **AI API**: 画像解析サービス（n8n経由）
+
+## 📦 セットアップ
+
+### 前提条件
+- Node.js 18以上
+- npm または yarn
+- n8nインスタンス（ローカルまたはクラウド）
+
+### 1. プロジェクトのクローン
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone [リポジトリURL]
+cd image-analyzer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. 依存関係のインストール
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. 環境変数の設定
+`.env.local`ファイルを作成し、n8nのWebhook URLを設定します：
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.local.example .env.local
+```
 
-## Learn More
+`.env.local`を編集：
+```
+NEXT_PUBLIC_N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/image-analyzer
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 4. 開発サーバーの起動
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+http://localhost:3000 でアプリケーションにアクセスできます。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔧 n8nワークフローの設定
 
-## Deploy on Vercel
+### 必要なn8nノード
+1. **Webhook**: 画像を受信するエンドポイント
+2. **AI画像解析ノード**: 画像を解析するAIサービス
+3. **Respond to Webhook**: 解析結果を返すノード
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### レスポンス形式
+n8nのRespond to Webhookノードは以下の形式でJSONを返す必要があります：
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```json
+{
+  "analysisResult": "ここに画像の解析結果テキストが入ります"
+}
+```
+
+## 📱 使い方
+
+1. **画像の選択**
+   - ドラッグ&ドロップエリアに画像をドロップ
+   - またはクリックしてファイルを選択
+
+2. **画像の確認**
+   - プレビューで画像を確認
+   - クリックして拡大表示も可能
+
+3. **解析の実行**
+   - 「解析を開始」ボタンをクリック
+   - 解析中はローディング表示
+
+4. **結果の確認**
+   - AI解析結果がテキストで表示される
+   - 「新しい画像を解析する」で次の画像へ
+
+## 🚀 デプロイ
+
+### Vercelへのデプロイ（推奨）
+```bash
+npm run build
+vercel
+```
+
+### その他のプラットフォーム
+- Netlify
+- AWS Amplify
+- Google Cloud Run
+- など、Next.jsに対応したプラットフォーム
+
+## 📝 開発コマンド
+
+```bash
+# 開発サーバーの起動
+npm run dev
+
+# プロダクションビルド
+npm run build
+
+# プロダクションサーバーの起動
+npm run start
+
+# ESLintによるコードチェック
+npm run lint
+```
+
+## 🤝 貢献
+
+プルリクエストを歓迎します！大きな変更を行う場合は、まずissueを作成して変更内容について議論してください。
+
+## 📄 ライセンス
+
+このプロジェクトはMITライセンスの下でライセンスされています。
