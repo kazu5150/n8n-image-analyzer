@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 
@@ -10,6 +10,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -90,7 +91,25 @@ export default function Home() {
     setPreview(null);
     setAnalysisResult(null);
     setError(null);
+    setIsZoomed(false);
   };
+
+  // ESCキーで拡大表示を閉じる
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isZoomed) {
+        setIsZoomed(false);
+      }
+    };
+
+    if (isZoomed) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isZoomed]);
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -141,13 +160,19 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">選択した画像</h2>
               <p className="text-sm text-gray-600">{selectedFile.name}</p>
             </div>
-            <div className="relative h-64 bg-gray-100 rounded-lg overflow-hidden mb-4">
+            <div 
+              className="relative h-64 bg-gray-100 rounded-lg overflow-hidden mb-4 cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setIsZoomed(true)}
+            >
               <Image
                 src={preview}
                 alt="プレビュー"
                 fill
                 className="object-contain"
               />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-20">
+                <p className="text-white bg-black bg-opacity-50 px-3 py-1 rounded">クリックで拡大</p>
+              </div>
             </div>
             <div className="flex gap-3">
               <button
@@ -201,6 +226,39 @@ export default function Home() {
             <div className="bg-white rounded-lg p-6 shadow-xl">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p className="text-gray-700">画像を解析中...</p>
+            </div>
+          </div>
+        )}
+
+        {/* 画像拡大モーダル */}
+        {isZoomed && preview && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+            onClick={() => setIsZoomed(false)}
+          >
+            <div className="relative max-w-7xl max-h-full">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsZoomed(false);
+                }}
+                className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors z-10"
+                aria-label="閉じる"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="relative">
+                <Image
+                  src={preview}
+                  alt="拡大画像"
+                  width={1200}
+                  height={800}
+                  className="object-contain max-h-[90vh] w-auto h-auto"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
             </div>
           </div>
         )}
