@@ -1,103 +1,210 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import Image from 'next/image';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    
+    if (file) {
+      // ファイルサイズチェック (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('ファイルサイズは5MB以下にしてください。');
+        return;
+      }
+
+      // ファイル形式チェック
+      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        setError('PNG、JPEG、GIF形式の画像のみ対応しています。');
+        return;
+      }
+
+      setError(null);
+      setSelectedFile(file);
+      setAnalysisResult(null);
+
+      // プレビュー生成
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif']
+    },
+    maxFiles: 1
+  });
+
+  const handleAnalyze = async () => {
+    if (!selectedFile) return;
+
+    setIsLoading(true);
+    setError(null);
+    setAnalysisResult(null);
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    try {
+      // TODO: n8nのWebhook URLを設定してください
+      const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || '';
+      
+      if (!N8N_WEBHOOK_URL) {
+        throw new Error('n8nのWebhook URLが設定されていません。');
+      }
+
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`エラーが発生しました: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAnalysisResult(data.analysisResult || data.result || data.message || '解析結果を取得できませんでした。');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '予期しないエラーが発生しました。');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setSelectedFile(null);
+    setPreview(null);
+    setAnalysisResult(null);
+    setError(null);
+  };
+
+  return (
+    <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-4xl font-bold text-center text-gray-900 mb-8">
+          画像解析アプリ
+        </h1>
+
+        {/* ファイルアップロードエリア */}
+        {!selectedFile && (
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+              isDragActive
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-300 hover:border-gray-400 bg-white'
+            }`}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            <input {...getInputProps()} />
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400 mb-4"
+              stroke="currentColor"
+              fill="none"
+              viewBox="0 0 48 48"
+            >
+              <path
+                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <p className="text-gray-600 mb-2">
+              {isDragActive
+                ? '画像をドロップしてください'
+                : '画像をドラッグ＆ドロップまたはクリックして選択'}
+            </p>
+            <p className="text-sm text-gray-500">
+              PNG, JPEG, GIF (最大5MB)
+            </p>
+          </div>
+        )}
+
+        {/* プレビューエリア */}
+        {selectedFile && preview && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">選択した画像</h2>
+              <p className="text-sm text-gray-600">{selectedFile.name}</p>
+            </div>
+            <div className="relative h-64 bg-gray-100 rounded-lg overflow-hidden mb-4">
+              <Image
+                src={preview}
+                alt="プレビュー"
+                fill
+                className="object-contain"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleAnalyze}
+                disabled={isLoading}
+                className={`flex-1 py-2 px-4 rounded-md font-medium text-white transition-colors ${
+                  isLoading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isLoading ? '解析中...' : '解析を開始'}
+              </button>
+              <button
+                onClick={handleReset}
+                disabled={isLoading}
+                className="py-2 px-4 rounded-md font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* エラーメッセージ */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* 解析結果 */}
+        {analysisResult && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">解析結果</h2>
+            <div className="bg-gray-50 rounded-md p-4">
+              <p className="text-gray-800 whitespace-pre-wrap">{analysisResult}</p>
+            </div>
+            <button
+              onClick={handleReset}
+              className="mt-4 w-full py-2 px-4 rounded-md font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+            >
+              新しい画像を解析する
+            </button>
+          </div>
+        )}
+
+        {/* ローディング表示 */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 shadow-xl">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-700">画像を解析中...</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
